@@ -332,6 +332,7 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                     restAccRef.current += (((_b = sessions[ei]) === null || _b === void 0 ? void 0 : _b.restSec) || 90);
                     setTotalRest(restAccRef.current);
                     alertDone();
+                    setDimMode(false);
                 }
             }, 500);
         }
@@ -451,10 +452,17 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     const totalVol = sessions.reduce((a, s) => a + s.sets.reduce((b, set) => b + (set.weight || 0) * (set.reps || 0), 0), 0);
     const totalSetsCount = sessions.reduce((a, s) => a + s.sets.length, 0);
     const doneSetsCount = sessions.reduce((a, s) => a + s.sets.filter(set => set.done).length, 0);
+    const [dimMode, setDimMode] = useState(false);
     const [showBarbell, setShowBarbell] = useState(false);
     return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#060c18", display: "flex", flexDirection: "column", zIndex: 100, maxWidth: 480, margin: "0 auto" } },
         showSummary && React.createElement(SummaryModal, { totalSec: elapsed, restSec: totalRest, sessions: sessions, planName: planName, onClose: onFinish }),
         showBarbell && React.createElement(BarbellCalc, { initWeight: curSet.weight || 0, onClose: () => setShowBarbell(false) }),
+        dimMode && restRem === null && (React.createElement("div", { onClick: () => setDimMode(false), style: { position: "absolute", inset: 0, background: "#000000f5", zIndex: 50,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 } },
+            React.createElement("div", { style: { color: "#1a2535", fontSize: 11, letterSpacing: 2 } }, "\u7701\u96FB\u6A21\u5F0F"),
+            React.createElement("div", { style: { color: "#1e3a2a", fontFamily: "monospace", fontSize: 22, fontWeight: 700 } }, fmtDur(elapsed)),
+            React.createElement("div", { style: { color: "#1a2535", fontSize: 48, fontWeight: 900, fontFamily: "monospace", marginTop: 8 } }, restRem !== null ? restRem : "—"),
+            React.createElement("div", { style: { color: "#1e2a20", fontSize: 11, marginTop: 16 } }, "\u9EDE\u64CA\u559A\u9192"))),
         showSwap && (React.createElement("div", { style: { position: "absolute", inset: 0, zIndex: 200 } },
             React.createElement("div", { style: { position: "absolute", inset: 0, background: "#000000dd", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
                 React.createElement("div", { style: { background: "#0d1422", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, border: "1px solid #1e2a40", borderBottom: "none", maxHeight: "80vh", display: "flex", flexDirection: "column" } },
@@ -536,7 +544,9 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 React.createElement("button", { onClick: () => { setShowOverview(true); setEditMode(false); setShowAddEx(false); }, style: { flex: 1, background: "transparent", border: "none", cursor: "pointer", textAlign: "center", padding: 0 } },
                     React.createElement("div", { style: { color: planColor, fontWeight: 800, fontSize: 13 } }, planName),
                     React.createElement("div", { style: { color: "#334", fontSize: 10, marginTop: 1 } }, "\u25BC \u67E5\u770B\u8AB2\u8868\u7E3D\u89BD")),
-                React.createElement("div", { style: { color: "#00e5ff", fontFamily: "monospace", fontSize: 14, fontWeight: 700 } }, fmtDur(elapsed))),
+                React.createElement("div", { style: { color: "#00e5ff", fontFamily: "monospace", fontSize: 14, fontWeight: 700 } }, fmtDur(elapsed)),
+                React.createElement("button", { onClick: () => setDimMode(d => !d), style: { background: dimMode ? "#22c55e18" : "#1a2535", border: `1px solid ${dimMode ? "#22c55e44" : "#2a3a50"}`,
+                        borderRadius: 8, color: dimMode ? "#22c55e" : "#445", fontSize: 11, padding: "5px 8px", cursor: "pointer", flexShrink: 0 } }, dimMode ? "🌕" : "🌑")),
             React.createElement("div", { style: { background: "#1a2535", borderRadius: 99, height: 4 } },
                 React.createElement("div", { style: { background: `linear-gradient(90deg,${planColor},#0077cc)`, borderRadius: 99, height: "100%", width: `${pct}%`, transition: "width 0.4s" } })),
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: 3 } },
