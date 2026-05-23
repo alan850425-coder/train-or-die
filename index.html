@@ -37,14 +37,11 @@ window._scheduleRestNotification = function(seconds, exerciseName) {
   if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   if(window._restNotifTimer) clearTimeout(window._restNotifTimer);
   window._restNotifTimer = setTimeout(function() {
-    // Vibrate only - no sound to interrupt music
-    try { navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 600]); } catch(e) {}
-    // Silent notification (banner shows but no sound)
     try {
       new Notification('⏰ 休息結束！', {
         body: (exerciseName ? exerciseName + ' — ' : '') + '準備好了，開始下一組！',
         icon: '/icon-192.png',
-        silent: true
+        silent: false
       });
     } catch(e) {}
   }, seconds * 1000);
