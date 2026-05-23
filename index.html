@@ -304,10 +304,13 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     }, []);
     // unlockAudio is now a no-op (removed audio to avoid interrupting music)
     const unlockAudio = useCallback(() => { }, []);
-    // Alert: vibrate only, no sound so music keeps playing
+    // Alert: strong vibration pattern, no sound
     const alertDone = useCallback(() => {
         try {
-            navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 600]);
+            navigator.vibrate && navigator.vibrate([
+                500, 100, 500, 100, 500, 100, // 三長震
+                200, 80, 200, 80, 200 // 三短震
+            ]);
         }
         catch (_a) { }
     }, []);
