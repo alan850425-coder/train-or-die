@@ -11,21 +11,37 @@
   <link rel="manifest" href="manifest.json"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#080e18;font-family:'Noto Sans TC',sans-serif;color:#fff;overflow-x:hidden;}
-    #root{min-height:100vh;}
+    body{background:#080e18;color:#fff;font-family:'Noto Sans TC',system-ui,sans-serif;overflow-x:hidden;}
+    #root{min-height:100dvh;}
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
     input[type=number]{-moz-appearance:textfield;}
-    input,button,select,textarea{-webkit-tap-highlight-color:transparent;}
+    input,button,select,textarea{-webkit-tap-highlight-color:transparent;font-family:inherit;}
     select option{background:#0d1422;color:#fff;}
+    ::-webkit-scrollbar{display:none;}
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script type="text/babel" data-presets="react">
+
+  <!-- React + ReactDOM UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel standalone for JSX transform -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.2/babel.min.js"></script>
+
+  <script>
+    // Show loading indicator while Babel parses
+    document.getElementById('root').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;flex-direction:column;gap:16px;">' +
+      '<div style="font-size:36px">💪</div>' +
+      '<div style="color:#00e5ff;font-family:monospace;font-size:18px;letter-spacing:2px;">TRAIN or DIE</div>' +
+      '<div style="color:#445;font-size:12px;">Loading...</div>' +
+      '</div>';
+  </script>
+
+  <script type="text/babel" data-presets="react,env" data-plugins="">
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ─── Default exercise database ───────────────────────────────────────────────
@@ -1999,7 +2015,9 @@ export default function App() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+// Mount app
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
 root.render(React.createElement(App));
   </script>
 </body>
