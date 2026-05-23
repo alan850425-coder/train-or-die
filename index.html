@@ -457,12 +457,12 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#060c18", display: "flex", flexDirection: "column", zIndex: 100, maxWidth: 480, margin: "0 auto" } },
         showSummary && React.createElement(SummaryModal, { totalSec: elapsed, restSec: totalRest, sessions: sessions, planName: planName, onClose: onFinish }),
         showBarbell && React.createElement(BarbellCalc, { initWeight: curSet.weight || 0, onClose: () => setShowBarbell(false) }),
-        dimMode && restRem === null && (React.createElement("div", { onClick: () => setDimMode(false), style: { position: "absolute", inset: 0, background: "#000000f5", zIndex: 50,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 } },
-            React.createElement("div", { style: { color: "#1a2535", fontSize: 11, letterSpacing: 2 } }, "\u7701\u96FB\u6A21\u5F0F"),
-            React.createElement("div", { style: { color: "#1e3a2a", fontFamily: "monospace", fontSize: 22, fontWeight: 700 } }, fmtDur(elapsed)),
-            React.createElement("div", { style: { color: "#1a2535", fontSize: 48, fontWeight: 900, fontFamily: "monospace", marginTop: 8 } }, restRem !== null ? restRem : "—"),
-            React.createElement("div", { style: { color: "#1e2a20", fontSize: 11, marginTop: 16 } }, "\u9EDE\u64CA\u559A\u9192"))),
+        restRem !== null && restRem > 10 && !dimMode && (React.createElement("div", { style: {
+                position: "absolute", inset: 0,
+                background: "#000000e8",
+                zIndex: 9,
+                pointerEvents: "none"
+            } })),
         showSwap && (React.createElement("div", { style: { position: "absolute", inset: 0, zIndex: 200 } },
             React.createElement("div", { style: { position: "absolute", inset: 0, background: "#000000dd", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
                 React.createElement("div", { style: { background: "#0d1422", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, border: "1px solid #1e2a40", borderBottom: "none", maxHeight: "80vh", display: "flex", flexDirection: "column" } },
@@ -544,9 +544,7 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 React.createElement("button", { onClick: () => { setShowOverview(true); setEditMode(false); setShowAddEx(false); }, style: { flex: 1, background: "transparent", border: "none", cursor: "pointer", textAlign: "center", padding: 0 } },
                     React.createElement("div", { style: { color: planColor, fontWeight: 800, fontSize: 13 } }, planName),
                     React.createElement("div", { style: { color: "#334", fontSize: 10, marginTop: 1 } }, "\u25BC \u67E5\u770B\u8AB2\u8868\u7E3D\u89BD")),
-                React.createElement("div", { style: { color: "#00e5ff", fontFamily: "monospace", fontSize: 14, fontWeight: 700 } }, fmtDur(elapsed)),
-                React.createElement("button", { onClick: () => setDimMode(d => !d), style: { background: dimMode ? "#22c55e18" : "#1a2535", border: `1px solid ${dimMode ? "#22c55e44" : "#2a3a50"}`,
-                        borderRadius: 8, color: dimMode ? "#22c55e" : "#445", fontSize: 11, padding: "5px 8px", cursor: "pointer", flexShrink: 0 } }, dimMode ? "🌕" : "🌑")),
+                React.createElement("div", { style: { color: "#00e5ff", fontFamily: "monospace", fontSize: 14, fontWeight: 700 } }, fmtDur(elapsed))),
             React.createElement("div", { style: { background: "#1a2535", borderRadius: 99, height: 4 } },
                 React.createElement("div", { style: { background: `linear-gradient(90deg,${planColor},#0077cc)`, borderRadius: 99, height: "100%", width: `${pct}%`, transition: "width 0.4s" } })),
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: 3 } },
@@ -616,32 +614,31 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 background: restRem === 0
                     ? "rgba(255,30,50,0.92)"
                     : restRem <= 5
-                        ? `rgba(${Math.floor(6 + 20 * (1 - restRem / 5))},${Math.floor(12 - 8 * (1 - restRem / 5))},${Math.floor(24 - 18 * (1 - restRem / 5))},0.97)`
-                        : "#060c18f0",
+                        ? `rgba(60,5,10,0.97)`
+                        : restRem <= 10
+                            ? "#0a0205f8"
+                            : "#000000f0",
                 display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center",
                 zIndex: 10, gap: 0,
                 transition: "background 0.5s"
             } }, restRem === 0 ? (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontSize: 72, marginBottom: 8, animation: "none" } }, "\uD83D\uDCAA"),
-            React.createElement("div", { style: {
-                    color: "#fff", fontSize: 52, fontWeight: 900, fontFamily: "monospace",
-                    letterSpacing: 2, marginBottom: 8, textShadow: "0 0 30px #fff8"
-                } }, "GO!"),
+            React.createElement("div", { style: { fontSize: 72, marginBottom: 8 } }, "\uD83D\uDCAA"),
+            React.createElement("div", { style: { color: "#fff", fontSize: 52, fontWeight: 900, fontFamily: "monospace", letterSpacing: 2, marginBottom: 8, textShadow: "0 0 30px #fff8" } }, "GO!"),
             React.createElement("div", { style: { color: "#ffcccc", fontSize: 18, fontWeight: 700, marginBottom: 32 } }, "\u6E96\u5099\u597D\u4E86\uFF0C\u4E0B\u4E00\u7D44\uFF01"),
-            React.createElement("button", { onClick: skipRest, style: { background: "#fff", border: "none", borderRadius: 14,
-                    color: "#cc0020", fontWeight: 900, fontSize: 18, padding: "16px 48px", cursor: "pointer",
-                    boxShadow: "0 4px 24px #0008" } }, "\u7E7C\u7E8C \u2192"))) : (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { color: restRem <= 5 ? "#ffaaaa" : "#445", fontSize: 12, letterSpacing: 3, marginBottom: 8 } }, restRem <= 5 ? "快好了！" : "組間休息"),
+            React.createElement("button", { onClick: skipRest, style: { background: "#fff", border: "none", borderRadius: 14, color: "#cc0020", fontWeight: 900, fontSize: 18, padding: "16px 48px", cursor: "pointer", boxShadow: "0 4px 24px #0008" } }, "\u7E7C\u7E8C \u2192"))) : restRem <= 10 ? (React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { color: restRem <= 5 ? "#ffaaaa" : "#f0a500", fontSize: 11, letterSpacing: 3, marginBottom: 8 } }, restRem <= 5 ? "快好了！" : "準備"),
             React.createElement("div", { style: {
-                    color: restRem <= 5 ? "#fff" : restRem <= 10 ? "#f0a500" : planColor,
+                    color: restRem <= 5 ? "#fff" : "#ffd93d",
                     fontSize: restRem <= 5 ? 120 : 96, fontWeight: 900, fontFamily: "monospace", lineHeight: 1,
-                    transition: "font-size 0.2s, color 0.3s",
-                    textShadow: restRem <= 5 ? `0 0 60px #fff8` : restRem <= 10 ? `0 0 30px #f0a50066` : `0 0 30px ${planColor}44`
+                    textShadow: restRem <= 5 ? "0 0 60px #fff8" : "0 0 30px #ffd93d66"
                 } }, restRem),
-            React.createElement("div", { style: { color: restRem <= 10 ? "#ffccaa" : "#445", fontSize: 13, marginTop: 12, marginBottom: 24 } }, "\u79D2\u5F8C\u7E7C\u7E8C"),
-            React.createElement("button", { onClick: skipRest, style: { background: "#ff4d6d18", border: "1px solid #ff4d6d55",
-                    borderRadius: 12, color: "#ff4d6d", fontSize: 15, fontWeight: 700, padding: "12px 36px", cursor: "pointer" } }, "\u8DF3\u904E\u4F11\u606F"))))),
+            React.createElement("div", { style: { color: restRem <= 5 ? "#ffccaa" : "#f0a50088", fontSize: 13, marginTop: 12, marginBottom: 24 } }, "\u79D2\u5F8C\u7E7C\u7E8C"),
+            React.createElement("button", { onClick: skipRest, style: { background: "#ff4d6d18", border: "1px solid #ff4d6d55", borderRadius: 12, color: "#ff4d6d", fontSize: 15, fontWeight: 700, padding: "12px 36px", cursor: "pointer" } }, "\u8DF3\u904E\u4F11\u606F"))) : (React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { color: "#1a2535", fontSize: 10, letterSpacing: 3, marginBottom: 16 } }, "\u7D44\u9593\u4F11\u606F"),
+            React.createElement("div", { style: { color: "#1e3050", fontSize: 72, fontWeight: 900, fontFamily: "monospace", lineHeight: 1 } }, restRem),
+            React.createElement("div", { style: { color: "#111820", fontSize: 11, marginTop: 16, marginBottom: 32 } }, "\u79D2"),
+            React.createElement("button", { onClick: skipRest, style: { background: "transparent", border: "1px solid #0e1820", borderRadius: 12, color: "#0e1820", fontSize: 13, padding: "10px 28px", cursor: "pointer" } }, "\u8DF3\u904E"))))),
         React.createElement("div", { style: { padding: "0 20px 32px", background: "#0a1020" } },
             lastRec ? (React.createElement("div", { style: { background: "#0e1a2e", borderRadius: 10, padding: "10px 14px", marginBottom: 12, border: "1px solid #1a2535" } },
                 React.createElement("div", { style: { color: "#334", fontSize: 10, marginBottom: 6, letterSpacing: 1 } },
