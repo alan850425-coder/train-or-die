@@ -19,43 +19,48 @@
     input,button,select,textarea{-webkit-tap-highlight-color:transparent;font-family:inherit;}
     select option{background:#0d1422;color:#fff;}
     ::-webkit-scrollbar{display:none;}
-    #errdiv{position:fixed;bottom:0;left:0;right:0;background:#200;color:#f88;font-size:10px;padding:8px;max-height:180px;overflow-y:auto;z-index:9999;word-break:break-all;}
   </style>
 </head>
 <body>
   <div id="root">
-    <div id="loading" style="display:flex;align-items:center;justify-content:center;height:100dvh;flex-direction:column;gap:16px;">
+    <div style="display:flex;align-items:center;justify-content:center;height:100dvh;flex-direction:column;gap:16px;">
       <div style="font-size:40px">&#x1F4AA;</div>
       <div style="color:#00e5ff;font-family:monospace;font-size:20px;letter-spacing:3px;font-weight:900;">TRAIN or DIE</div>
-      <div id="status" style="color:#445;font-size:12px;">Loading React...</div>
+      <div style="color:#445;font-size:12px;">Starting...</div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <script>
-  function showErr(msg) {
-    var d = document.getElementById('errdiv') || document.createElement('div');
-    d.id='errdiv'; document.body.appendChild(d);
-    d.innerHTML += '<div>' + String(msg).slice(0,400) + '</div>';
+// ── Notification ──────────────────────────────────────────────────────────────
+function requestNotifPermission() {
+  if(typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission();
   }
-  function setStatus(msg) {
-    var s = document.getElementById('status');
-    if(s) s.textContent = msg;
-  }
-  window.onerror = function(m,s,l,c,e) {
-    showErr('ERR:'+m+' line:'+l+' '+(e&&e.stack?e.stack.slice(0,200):''));
-  };
-  </script>
+}
 
-  <!-- Use jsdelivr CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js" 
-    onload="setStatus('React OK, loading ReactDOM...')"
-    onerror="showErr('React CDN failed')"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"
-    onload="setStatus('ReactDOM OK, starting app...')"
-    onerror="showErr('ReactDOM CDN failed')"></script>
+window._scheduleRestNotification = function(seconds, exerciseName) {
+  if(typeof Notification === 'undefined') return;
+  if(Notification.permission !== 'granted') { requestNotifPermission(); return; }
+  if(window._restNotifTimer) clearTimeout(window._restNotifTimer);
+  window._restNotifTimer = setTimeout(function() {
+    try {
+      new Notification('⏰ 休息結束！', {
+        body: (exerciseName ? exerciseName + ' — ' : '') + '準備好了，開始下一組！',
+        icon: '/icon-192.png',
+        silent: false
+      });
+    } catch(e) {}
+  }, seconds * 1000);
+};
 
-  <script>
-try {
+window._cancelRestNotification = function() {
+  if(window._restNotifTimer) { clearTimeout(window._restNotifTimer); window._restNotifTimer = null; }
+};
+
+requestNotifPermission();
+
 const { useState, useEffect, useRef, useCallback } = React;
 // ─── Default exercise database ───────────────────────────────────────────────
 const DEFAULT_EXERCISES = [
@@ -414,7 +419,7 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
         updateCurSet(f, f === "weight" ? Math.round(val * 4) / 4 : val);
     };
     const doneSet = () => {
-        var _a;
+        var _a, _b;
         unlockAudio();
         const ns = sessions.map((s, i) => i === ei ? Object.assign(Object.assign({}, s), { sets: s.sets.map((set, j) => j === si ? Object.assign(Object.assign({}, set), { done: true }) : set) }) : s);
         setSessions(ns);
@@ -424,6 +429,10 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
             setRestEndTime(Date.now() + dur * 1000);
             setRestRem(dur);
             setRestRun(true);
+            // Schedule system notification for when rest ends
+            if (typeof window._scheduleRestNotification === 'function') {
+                window._scheduleRestNotification(dur, (_b = sessions[ei]) === null || _b === void 0 ? void 0 : _b.exercise);
+            }
         }
         if (!isLastSet) {
             setTimeout(() => setCursor(c => c + 1), 300);
@@ -433,7 +442,16 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
             setTimeout(() => setShowSummary(true), 400);
         }
     };
-    const skipRest = () => { unlockAudio(); clearInterval(restRef.current); setRestRun(false); setRestRem(null); setRestEndTime(null); };
+    const skipRest = () => {
+        unlockAudio();
+        clearInterval(restRef.current);
+        setRestRun(false);
+        setRestRem(null);
+        setRestEndTime(null);
+        if (typeof window._cancelRestNotification === 'function') {
+            window._cancelRestNotification();
+        }
+    };
     const pct = (cursor / (flat.length)) * 100;
     // ── Overview panel state ─────────────────────────────────────
     const [showOverview, setShowOverview] = useState(false);
@@ -1427,14 +1445,9 @@ function App() {
 }
 
 
-// Mount app
-setStatus('Mounting...');
+// Mount
 const _root = ReactDOM.createRoot(document.getElementById('root'));
 _root.render(React.createElement(App, null));
-
-} catch(e) {
-  showErr('APP ERR: ' + e.message + ' | ' + (e.stack||'').slice(0,300));
-}
   </script>
 </body>
 </html>
