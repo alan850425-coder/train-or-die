@@ -262,15 +262,16 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     const [elapsed, setElapsed] = useState(0);
     const [totalRest, setTotalRest] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
-    // Use wall-clock start time so background tab doesn't freeze elapsed
     const startTimeRef = useRef(Date.now());
     const elapsedRef = useRef();
-    // Rest timer: track wall-clock end time so background doesn't break it
-    const [restRem, setRestRem] = useState(null);
-    const [restEndTime, setRestEndTime] = useState(null); // absolute ms
-    const [restRun, setRestRun] = useState(false);
-    const restRef = useRef();
-    const restAccRef = useRef(0); // accumulated rest seconds
+    const restAccRef = useRef(0);
+    // Elapsed ticker
+    useEffect(() => {
+        elapsedRef.current = setInterval(() => {
+            setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 1000);
+        return () => clearInterval(elapsedRef.current);
+    }, []);
     // ── Audio system ──────────────────────────────────────────────
     // iOS requires an active audio session to play sound in background.
     // Strategy: play a silent looping audio to keep the session alive,
@@ -301,16 +302,6 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     }, []);
     // unlockAudio is now a no-op (removed audio to avoid interrupting music)
     const unlockAudio = useCallback(() => { }, []);
-    // Alert: strong vibration pattern, no sound
-    const alertDone = useCallback(() => {
-        try {
-            navigator.vibrate && navigator.vibrate([
-                500, 100, 500, 100, 500, 100, // 三長震
-                200, 80, 200, 80, 200 // 三短震
-            ]);
-        }
-        catch (_a) { }
-    }, []);
     // Elapsed ticker (wall-clock based)
     useEffect(() => {
         elapsedRef.current = setInterval(() => {
@@ -318,26 +309,6 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
         }, 1000);
         return () => clearInterval(elapsedRef.current);
     }, []);
-    // Rest ticker (wall-clock based)
-    useEffect(() => {
-        if (restRun && restEndTime !== null) {
-            restRef.current = setInterval(() => {
-                var _a, _b;
-                const rem = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
-                setRestRem(rem);
-                if (rem <= 0) {
-                    clearInterval(restRef.current);
-                    setRestRun(false);
-                    const dur = Math.round((restEndTime - (restEndTime - (((_a = sessions[ei]) === null || _a === void 0 ? void 0 : _a.restSec) || 90) * 1000)) / 1000);
-                    restAccRef.current += (((_b = sessions[ei]) === null || _b === void 0 ? void 0 : _b.restSec) || 90);
-                    setTotalRest(restAccRef.current);
-                    alertDone();
-                    setDimMode(false);
-                }
-            }, 500);
-        }
-        return () => clearInterval(restRef.current);
-    }, [restRun, restEndTime, alertDone]);
     if (flat.length === 0)
         return null;
     const cur = flat[cursor] || flat[flat.length - 1];
@@ -373,39 +344,19 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
         updateCurSet(f, f === "weight" ? Math.round(val * 4) / 4 : val);
     };
     const doneSet = () => {
-        var _a, _b;
         unlockAudio();
         const ns = sessions.map((s, i) => i === ei ? Object.assign(Object.assign({}, s), { sets: s.sets.map((set, j) => j === si ? Object.assign(Object.assign({}, set), { done: true }) : set) }) : s);
         setSessions(ns);
-        const mode = ((_a = sessions[ei]) === null || _a === void 0 ? void 0 : _a.mode) || "normal";
-        if (mode !== "dropset") {
-            const dur = sessions[ei].restSec || 90;
-            setRestEndTime(Date.now() + dur * 1000);
-            setRestRem(dur);
-            setRestRun(true);
-            // Schedule system notification for when rest ends
-            if (typeof window._scheduleRestNotification === 'function') {
-                window._scheduleRestNotification(dur, (_b = sessions[ei]) === null || _b === void 0 ? void 0 : _b.exercise);
-            }
-        }
+        // Just advance to next set, no internal rest timer
         if (!isLastSet) {
-            setTimeout(() => setCursor(c => c + 1), 300);
+            setTimeout(() => setCursor(c => c + 1), 200);
         }
         else {
             clearInterval(elapsedRef.current);
-            setTimeout(() => setShowSummary(true), 400);
+            setTimeout(() => setShowSummary(true), 300);
         }
     };
-    const skipRest = () => {
-        unlockAudio();
-        clearInterval(restRef.current);
-        setRestRun(false);
-        setRestRem(null);
-        setRestEndTime(null);
-        if (typeof window._cancelRestNotification === 'function') {
-            window._cancelRestNotification();
-        }
-    };
+    const skipRest = () => { }; // no-op, rest handled by Timer+
     const pct = (cursor / (flat.length)) * 100;
     // ── Overview panel state ─────────────────────────────────────
     const [showOverview, setShowOverview] = useState(false);
@@ -457,12 +408,6 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#060c18", display: "flex", flexDirection: "column", zIndex: 100, maxWidth: 480, margin: "0 auto" } },
         showSummary && React.createElement(SummaryModal, { totalSec: elapsed, restSec: totalRest, sessions: sessions, planName: planName, onClose: onFinish }),
         showBarbell && React.createElement(BarbellCalc, { initWeight: curSet.weight || 0, onClose: () => setShowBarbell(false) }),
-        restRem !== null && restRem > 10 && !dimMode && (React.createElement("div", { style: {
-                position: "absolute", inset: 0,
-                background: "#000000e8",
-                zIndex: 9,
-                pointerEvents: "none"
-            } })),
         showSwap && (React.createElement("div", { style: { position: "absolute", inset: 0, zIndex: 200 } },
             React.createElement("div", { style: { position: "absolute", inset: 0, background: "#000000dd", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
                 React.createElement("div", { style: { background: "#0d1422", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, border: "1px solid #1e2a40", borderBottom: "none", maxHeight: "80vh", display: "flex", flexDirection: "column" } },
@@ -609,74 +554,15 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                     React.createElement("div", { style: { width: 120, textAlign: "center" } },
                         React.createElement("div", { style: { color: "#fff", fontSize: 56, fontWeight: 900, lineHeight: 1, fontVariantNumeric: "tabular-nums" } }, curSet.reps || 0)),
                     React.createElement("button", { onClick: () => adj("reps", 1), style: { width: 64, height: 64, borderRadius: "50%", background: "#0e1a2e", border: `2px solid ${planColor}44`, color: planColor, fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 300 } }, "+")))),
-        restRem !== null && (React.createElement("div", { style: {
-                position: "absolute", inset: 0,
-                background: restRem === 0
-                    ? "rgba(255,30,50,0.92)"
-                    : restRem <= 5
-                        ? `rgba(60,5,10,0.97)`
-                        : restRem <= 10
-                            ? "#0a0205f8"
-                            : "#000000f0",
-                display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center",
-                zIndex: 10, gap: 0,
-                transition: "background 0.5s"
-            } }, restRem === 0 ? (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontSize: 72, marginBottom: 8 } }, "\uD83D\uDCAA"),
-            React.createElement("div", { style: { color: "#fff", fontSize: 52, fontWeight: 900, fontFamily: "monospace", letterSpacing: 2, marginBottom: 8, textShadow: "0 0 30px #fff8" } }, "GO!"),
-            React.createElement("div", { style: { color: "#ffcccc", fontSize: 18, fontWeight: 700, marginBottom: 32 } }, "\u6E96\u5099\u597D\u4E86\uFF0C\u4E0B\u4E00\u7D44\uFF01"),
-            React.createElement("button", { onClick: skipRest, style: { background: "#fff", border: "none", borderRadius: 14, color: "#cc0020", fontWeight: 900, fontSize: 18, padding: "16px 48px", cursor: "pointer", boxShadow: "0 4px 24px #0008" } }, "\u7E7C\u7E8C \u2192"))) : restRem <= 10 ? (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { color: restRem <= 5 ? "#ffaaaa" : "#f0a500", fontSize: 11, letterSpacing: 3, marginBottom: 8 } }, restRem <= 5 ? "快好了！" : "準備"),
-            React.createElement("div", { style: {
-                    color: restRem <= 5 ? "#fff" : "#ffd93d",
-                    fontSize: restRem <= 5 ? 120 : 96, fontWeight: 900, fontFamily: "monospace", lineHeight: 1,
-                    textShadow: restRem <= 5 ? "0 0 60px #fff8" : "0 0 30px #ffd93d66"
-                } }, restRem),
-            React.createElement("div", { style: { color: restRem <= 5 ? "#ffccaa" : "#f0a50088", fontSize: 13, marginTop: 12, marginBottom: 24 } }, "\u79D2\u5F8C\u7E7C\u7E8C"),
-            React.createElement("button", { onClick: skipRest, style: { background: "#ff4d6d18", border: "1px solid #ff4d6d55", borderRadius: 12, color: "#ff4d6d", fontSize: 15, fontWeight: 700, padding: "12px 36px", cursor: "pointer" } }, "\u8DF3\u904E\u4F11\u606F"))) : (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { color: "#1a2535", fontSize: 10, letterSpacing: 3, marginBottom: 16 } }, "\u7D44\u9593\u4F11\u606F"),
-            React.createElement("div", { style: { color: "#1e3050", fontSize: 72, fontWeight: 900, fontFamily: "monospace", lineHeight: 1 } }, restRem),
-            React.createElement("div", { style: { color: "#111820", fontSize: 11, marginTop: 16, marginBottom: 32 } }, "\u79D2"),
-            React.createElement("button", { onClick: skipRest, style: { background: "transparent", border: "1px solid #0e1820", borderRadius: 12, color: "#0e1820", fontSize: 13, padding: "10px 28px", cursor: "pointer" } }, "\u8DF3\u904E"))))),
         React.createElement("div", { style: { padding: "0 20px 32px", background: "#0a1020" } },
-            lastRec ? (React.createElement("div", { style: { background: "#0e1a2e", borderRadius: 10, padding: "10px 14px", marginBottom: 12, border: "1px solid #1a2535" } },
-                React.createElement("div", { style: { color: "#334", fontSize: 10, marginBottom: 6, letterSpacing: 1 } },
-                    "\u4E0A\u6B21\u7D00\u9304 ",
-                    fmtDate(lastRec.date)),
-                React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } }, lastRec.sets.map((s, i) => (React.createElement("div", { key: i, style: { color: "#556", fontSize: 12 } },
-                    React.createElement("span", { style: { color: "#667" } },
-                        "S",
-                        i + 1,
-                        " "),
-                    React.createElement("span", { style: { color: s.weight === curSet.weight && s.reps === curSet.reps ? "#22c55e" : "#778", fontWeight: 600 } },
-                        s.weight,
-                        "\u00D7",
-                        s.reps))))),
-                si < lastRec.sets.length && (() => {
-                    const ls = lastRec.sets[si];
-                    const diff = (curSet.weight * curSet.reps) - (ls.weight * ls.reps);
-                    if (diff > 0)
-                        return React.createElement("div", { style: { color: "#22c55e", fontSize: 11, marginTop: 4 } },
-                            "\u2191 \u6BD4\u4E0A\u6B21\u591A ",
-                            diff,
-                            " kg \u8A13\u7DF4\u91CF");
-                    if (diff < 0)
-                        return React.createElement("div", { style: { color: "#f0a500", fontSize: 11, marginTop: 4 } },
-                            "\u2193 \u6BD4\u4E0A\u6B21\u5C11 ",
-                            Math.abs(diff),
-                            " kg \u8A13\u7DF4\u91CF");
-                    return React.createElement("div", { style: { color: "#445", fontSize: 11, marginTop: 4 } }, "= \u8207\u4E0A\u6B21\u76F8\u540C");
-                })())) : (React.createElement("div", { style: { background: "#0e1a2e", borderRadius: 10, padding: "10px 14px", marginBottom: 12, border: "1px solid #1a2535" } },
-                React.createElement("div", { style: { color: "#334", fontSize: 11, textAlign: "center" } }, "\u6B64\u52D5\u4F5C\u5C1A\u7121\u6B77\u53F2\u7D00\u9304"))),
             React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
                 React.createElement("button", { onClick: () => setCursor(c => Math.max(0, c - 1)), disabled: cursor === 0, style: { width: 48, height: 48, borderRadius: 12, background: "#0e1a2e", border: "1px solid #1e2a40",
                         color: cursor === 0 ? "#2a3a50" : "#ff6b6b", fontSize: 22, cursor: cursor === 0 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" } }, "\u2039\u2039"),
                 React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 6 } },
-                    React.createElement("button", { onClick: doneSet, disabled: restRun, style: { width: "100%", height: 48, borderRadius: 12,
-                            background: restRun ? "#1a2535" : `linear-gradient(135deg,${planColor},#0055cc)`,
-                            border: "none", color: restRun ? "#334" : "#000", fontWeight: 900, fontSize: 15,
-                            cursor: restRun ? "not-allowed" : "pointer", letterSpacing: 1, transition: "background 0.2s" } }, isLastSet ? "完成訓練 ✓" : "完成這組 →"),
+                    React.createElement("button", { onClick: doneSet, style: { width: "100%", height: 48, borderRadius: 12,
+                            background: `linear-gradient(135deg,${planColor},#0055cc)`,
+                            border: "none", color: "#000", fontWeight: 900, fontSize: 15,
+                            cursor: "pointer", letterSpacing: 1 } }, isLastSet ? "完成訓練 ✓" : "完成這組 →"),
                     !isLastSet && (() => {
                         var _a, _b;
                         const sec = ((_a = sessions[ei]) === null || _a === void 0 ? void 0 : _a.restSec) || 90;
