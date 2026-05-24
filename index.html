@@ -251,14 +251,14 @@ function ExPickerBody({ exercises, onSelect }) {
                 React.createElement("span", { style: { color: "#d0d8e8", fontWeight: 600, fontSize: 14 } }, ex.name)))))));
 }
 // ─── Active Workout Screen (one set at a time) ────────────────────────────────
-function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date, onFinish }) {
+function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date, onFinish, onSaveState, initCursor = 0 }) {
     var _a, _b, _c, _d, _e, _f, _g;
     // Flatten all sets into a list: [{exIdx, setIdx, exName, restSec}]
     const flat = [];
     sessions.forEach((s, ei) => {
         s.sets.forEach((_, si) => { flat.push({ ei, si, exName: s.exercise, restSec: s.restSec || 90 }); });
     });
-    const [cursor, setCursor] = useState(0);
+    const [cursor, setCursor] = useState(initCursor);
     const [elapsed, setElapsed] = useState(0);
     const [totalRest, setTotalRest] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
@@ -279,6 +279,9 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     const wakeLockRef = useRef(null);
     // Wake lock - keep screen on during training
     useEffect(() => {
+        // Save that training is active
+        if (onSaveState)
+            onSaveState(cursor, flat.length);
         const acquire = async () => {
             try {
                 if ('wakeLock' in navigator) {
@@ -347,12 +350,17 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
         unlockAudio();
         const ns = sessions.map((s, i) => i === ei ? Object.assign(Object.assign({}, s), { sets: s.sets.map((set, j) => j === si ? Object.assign(Object.assign({}, set), { done: true }) : set) }) : s);
         setSessions(ns);
-        // Just advance to next set, no internal rest timer
         if (!isLastSet) {
-            setTimeout(() => setCursor(c => c + 1), 200);
+            const nextCursor = cursor + 1;
+            setTimeout(() => setCursor(nextCursor), 200);
+            // Save progress so we can resume if app is closed
+            if (onSaveState)
+                onSaveState(nextCursor, flat.length);
         }
         else {
             clearInterval(elapsedRef.current);
+            if (onSaveState)
+                onSaveState(flat.length, flat.length); // mark complete
             setTimeout(() => setShowSummary(true), 300);
         }
     };
@@ -591,7 +599,39 @@ function LogPage({ data, setData, plans }) {
     const [planColor, setPlanColor] = useState("#00e5ff");
     const [showPicker, setShowPicker] = useState(false);
     const [active, setActive] = useState(false);
+    const [showResume, setShowResume] = useState(false);
+    // Check for interrupted workout on mount
     useEffect(() => {
+        const saved = LS.get("wt_active_workout", null);
+        if (saved && saved.date === todayStr() && saved.cursor < saved.totalSets) {
+            setShowResume(true);
+        }
+    }, []);
+    // Save active workout state
+    const saveActiveState = useCallback((cursor, totalSets) => {
+        LS.set("wt_active_workout", { date: todayStr(), cursor, totalSets });
+    }, []);
+    const clearActiveState = () => LS.set("wt_active_workout", null);
+    const [resumeCursor, setResumeCursor] = useState(0);
+    const resumeWorkout = () => {
+        const saved = LS.get("wt_active_workout", null);
+        const rec = data[todayStr()];
+        if (rec && rec.sessions) {
+            setSessions_(rec.sessions);
+            setPlanName(rec.planName || "");
+            setPlanColor(rec.planColor || "#00e5ff");
+        }
+        setResumeCursor((saved === null || saved === void 0 ? void 0 : saved.cursor) || 0);
+        setShowResume(false);
+        setActive(true);
+    };
+    const discardWorkout = () => {
+        clearActiveState();
+        setShowResume(false);
+    };
+    useEffect(() => {
+        if (showResume)
+            return; // don't override resume dialog
         const rec = data[date];
         if (rec && rec.sessions) {
             setSessions_(rec.sessions);
@@ -632,9 +672,20 @@ function LogPage({ data, setData, plans }) {
     const doneSets = sessions.reduce((a, s) => a + s.sets.filter(set => set.done).length, 0);
     const totalSets = sessions.reduce((a, s) => a + s.sets.length, 0);
     if (active)
-        return (React.createElement(ActiveWorkout, { sessions: sessions, setSessions: (ns) => setSessions(ns), planName: planName, planColor: planColor, data: data, date: date, onFinish: () => setActive(false) }));
+        return (React.createElement(ActiveWorkout, { sessions: sessions, setSessions: (ns) => setSessions(ns), planName: planName, planColor: planColor, data: data, date: date, initCursor: resumeCursor, onSaveState: saveActiveState, onFinish: () => { clearActiveState(); setActive(false); } }));
     return (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
         showPicker && React.createElement(PlanSelectModal, { plans: plans, onSelect: selectPlan, onCancel: () => setShowPicker(false) }),
+        showResume && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#000000ee", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 24 } },
+            React.createElement("div", { style: { background: "#0d1422", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380, border: "1px solid #f0a50033" } },
+                React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } },
+                    React.createElement("div", { style: { fontSize: 36, marginBottom: 8 } }, "\u26A1"),
+                    React.createElement("div", { style: { color: "#e0e8f0", fontWeight: 900, fontSize: 18, marginBottom: 6 } }, "\u6709\u672A\u5B8C\u6210\u7684\u8A13\u7DF4"),
+                    React.createElement("div", { style: { color: "#556", fontSize: 13 } }, "\u8981\u7E7C\u7E8C\u525B\u624D\u7684\u8A13\u7DF4\uFF0C\u9084\u662F\u91CD\u65B0\u958B\u59CB\uFF1F")),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                    React.createElement("button", { onClick: resumeWorkout, style: { background: "linear-gradient(135deg,#00e5ff,#0077cc)", border: "none", borderRadius: 12,
+                            color: "#000", fontWeight: 900, fontSize: 15, padding: "14px", cursor: "pointer" } }, "\u26A1 \u6062\u5FA9\u8A13\u7DF4"),
+                    React.createElement("button", { onClick: discardWorkout, style: { background: "#ff4d6d12", border: "1px solid #ff4d6d44", borderRadius: 12,
+                            color: "#ff4d6d", fontWeight: 700, fontSize: 14, padding: "12px", cursor: "pointer" } }, "\uD83D\uDDD1 \u653E\u68C4\uFF0C\u91CD\u65B0\u958B\u59CB"))))),
         React.createElement("div", { style: { background: "#0e1420", borderRadius: 12, padding: "12px 14px", border: "1px solid #1e2a40" } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
                 React.createElement("div", { style: { flex: 1 } },
