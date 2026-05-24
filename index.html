@@ -672,10 +672,25 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
             React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
                 React.createElement("button", { onClick: () => setCursor(c => Math.max(0, c - 1)), disabled: cursor === 0, style: { width: 48, height: 48, borderRadius: 12, background: "#0e1a2e", border: "1px solid #1e2a40",
                         color: cursor === 0 ? "#2a3a50" : "#ff6b6b", fontSize: 22, cursor: cursor === 0 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" } }, "\u2039\u2039"),
-                React.createElement("button", { onClick: doneSet, disabled: restRun, style: { flex: 1, height: 56, borderRadius: 14,
-                        background: restRun ? "#1a2535" : `linear-gradient(135deg,${planColor},#0055cc)`,
-                        border: "none", color: restRun ? "#334" : "#000", fontWeight: 900, fontSize: 16, cursor: restRun ? "not-allowed" : "pointer",
-                        letterSpacing: 1, transition: "background 0.2s" } }, isLastSet ? "完成訓練 ✓" : "完成這組 →"),
+                React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 6 } },
+                    React.createElement("button", { onClick: doneSet, disabled: restRun, style: { width: "100%", height: 48, borderRadius: 12,
+                            background: restRun ? "#1a2535" : `linear-gradient(135deg,${planColor},#0055cc)`,
+                            border: "none", color: restRun ? "#334" : "#000", fontWeight: 900, fontSize: 15, cursor: restRun ? "not-allowed" : "pointer",
+                            letterSpacing: 1, transition: "background 0.2s" } }, isLastSet ? "完成訓練 ✓" : "完成這組 →"),
+                    !isLastSet && !restRun && (() => {
+                        var _a;
+                        const sec = ((_a = sessions[ei]) === null || _a === void 0 ? void 0 : _a.restSec) || 90;
+                        const m = Math.floor(sec / 60);
+                        const s = sec % 60;
+                        const url = `clock-timer://?seconds=${sec}`;
+                        return (React.createElement("a", { href: url, style: { display: "block", width: "100%", textAlign: "center", background: "#0a1018",
+                                border: "1px solid #1e2a40", borderRadius: 10, color: "#445", fontSize: 11,
+                                padding: "6px", textDecoration: "none", letterSpacing: 0.5 } },
+                            "\u23F1 \u958B\u555F\u8A08\u6642 ",
+                            m > 0 ? `${m}分` : "",
+                            s > 0 ? `${s}秒` : "",
+                            "\uFF08iPhone \u6642\u9418\uFF09"));
+                    })()),
                 React.createElement("button", { onClick: () => setCursor(c => Math.min(flat.length - 1, c + 1)), disabled: cursor === flat.length - 1, style: { width: 48, height: 48, borderRadius: 12, background: "#0e1a2e", border: "1px solid #1e2a40",
                         color: cursor === flat.length - 1 ? "#2a3a50" : "#ff6b6b", fontSize: 22, cursor: cursor === flat.length - 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" } }, "\u203A\u203A")))));
 }
