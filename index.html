@@ -543,7 +543,8 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 24 } },
                     React.createElement("button", { onClick: () => adj("weight", -1), style: { width: 64, height: 64, borderRadius: "50%", background: "#0e1a2e", border: `2px solid ${planColor}44`, color: planColor, fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 300 } }, "\u2212"),
                     React.createElement("div", { style: { width: 120, textAlign: "center" } },
-                        React.createElement("div", { style: { color: "#fff", fontSize: 56, fontWeight: 900, lineHeight: 1, fontVariantNumeric: "tabular-nums" } }, curSet.weight || 0)),
+                        React.createElement("input", { type: "number", value: curSet.weight || 0, onChange: e => updateCurSet("weight", parseFloat(e.target.value) || 0), onFocus: e => e.target.select(), style: { width: "100%", background: "transparent", border: "none", color: "#fff",
+                                fontSize: 56, fontWeight: 900, textAlign: "center", fontVariantNumeric: "tabular-nums" } })),
                     React.createElement("button", { onClick: () => adj("weight", 1), style: { width: 64, height: 64, borderRadius: "50%", background: "#0e1a2e", border: `2px solid ${planColor}44`, color: planColor, fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 300 } }, "+")),
                 React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginTop: 8, flexWrap: "wrap" } },
                     [5, 10, 20].map(v => (React.createElement("button", { key: v, onClick: () => updateCurSet("weight", v), style: { background: "#0e1a2e", border: "1px solid #1e2a40", borderRadius: 20, color: "#556", fontSize: 11, padding: "3px 10px", cursor: "pointer" } },
@@ -560,9 +561,45 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 24 } },
                     React.createElement("button", { onClick: () => adj("reps", -1), style: { width: 64, height: 64, borderRadius: "50%", background: "#0e1a2e", border: `2px solid ${planColor}44`, color: planColor, fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 300 } }, "\u2212"),
                     React.createElement("div", { style: { width: 120, textAlign: "center" } },
-                        React.createElement("div", { style: { color: "#fff", fontSize: 56, fontWeight: 900, lineHeight: 1, fontVariantNumeric: "tabular-nums" } }, curSet.reps || 0)),
+                        React.createElement("input", { type: "number", value: curSet.reps || 0, onChange: e => updateCurSet("reps", parseInt(e.target.value) || 0), onFocus: e => e.target.select(), style: { width: "100%", background: "transparent", border: "none", color: "#fff",
+                                fontSize: 56, fontWeight: 900, textAlign: "center", fontVariantNumeric: "tabular-nums" } })),
                     React.createElement("button", { onClick: () => adj("reps", 1), style: { width: 64, height: 64, borderRadius: "50%", background: "#0e1a2e", border: `2px solid ${planColor}44`, color: planColor, fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 300 } }, "+")))),
         React.createElement("div", { style: { padding: "0 20px 32px", background: "#0a1020" } },
+            lastRec && (React.createElement("div", { style: { background: "#0a1018", borderRadius: 10, padding: "8px 14px", marginBottom: 10, border: "1px solid #1a2535" } },
+                React.createElement("div", { style: { color: "#334", fontSize: 10, marginBottom: 5, letterSpacing: 1 } },
+                    "\u4E0A\u6B21 ",
+                    fmtDate(lastRec.date)),
+                React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" } },
+                    lastRec.sets.map((s, i) => {
+                        const isCurrent = i === si;
+                        const diff = isCurrent ? ((curSet.weight || 0) * (curSet.reps || 0)) - ((s.weight || 0) * (s.reps || 0)) : 0;
+                        return (React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 3 } },
+                            React.createElement("span", { style: { color: "#334", fontSize: 10 } },
+                                "S",
+                                i + 1),
+                            React.createElement("span", { style: {
+                                    color: isCurrent ? (diff > 0 ? "#22c55e" : diff < 0 ? "#ff4d6d" : "#778") : "#556",
+                                    fontWeight: isCurrent ? 700 : 400, fontSize: 12
+                                } },
+                                s.weight,
+                                "\u00D7",
+                                s.reps)));
+                    }),
+                    si < lastRec.sets.length && (() => {
+                        const ls = lastRec.sets[si];
+                        const diff = ((curSet.weight || 0) * (curSet.reps || 0)) - ((ls.weight || 0) * (ls.reps || 0));
+                        if (diff > 0)
+                            return React.createElement("span", { style: { color: "#22c55e", fontSize: 10, marginLeft: "auto" } },
+                                "\u2191 +",
+                                diff,
+                                "kg");
+                        if (diff < 0)
+                            return React.createElement("span", { style: { color: "#ff4d6d", fontSize: 10, marginLeft: "auto" } },
+                                "\u2193 ",
+                                diff,
+                                "kg");
+                        return React.createElement("span", { style: { color: "#445", fontSize: 10, marginLeft: "auto" } }, "= \u6301\u5E73");
+                    })()))),
             React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
                 React.createElement("button", { onClick: () => setCursor(c => Math.max(0, c - 1)), disabled: cursor === 0, style: { width: 48, height: 48, borderRadius: 12, background: "#0e1a2e", border: "1px solid #1e2a40",
                         color: cursor === 0 ? "#2a3a50" : "#ff6b6b", fontSize: 22, cursor: cursor === 0 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" } }, "\u2039\u2039"),
@@ -653,14 +690,29 @@ function LogPage({ data, setData, plans }) {
     }, [date]);
     const setSessions = useCallback((ns, pn = planName, pc = planColor) => { setSessions_(ns); persist(ns, pn, pc); }, [planName, planColor, persist]);
     const selectPlan = (plan) => {
-        const ns = plan.exercises.map(ex => ({
-            exercise: ex.name,
-            restSec: ex.restSec || 90,
-            mode: ex.mode || "normal",
-            superPair: ex.superPair || "",
-            unilateral: ex.unilateral || false,
-            sets: ex.sets.map(s => ({ weight: +s.weight || 0, reps: +s.reps || 0, warmup: s.warmup || false, done: false, weightR: +s.weightR || 0 }))
-        }));
+        // Build sessions from plan, but override weight/reps with last actual record
+        const ns = plan.exercises.map(ex => {
+            const lastRec = getLastRecord(data, ex.name, date);
+            return {
+                exercise: ex.name,
+                restSec: ex.restSec || 90,
+                mode: ex.mode || "normal",
+                superPair: ex.superPair || "",
+                unilateral: ex.unilateral || false,
+                sets: ex.sets.map((s, si) => {
+                    var _a;
+                    // Use last record for this set index if available, otherwise use plan default
+                    const lastSet = (_a = lastRec === null || lastRec === void 0 ? void 0 : lastRec.sets) === null || _a === void 0 ? void 0 : _a[si];
+                    return {
+                        weight: (lastSet === null || lastSet === void 0 ? void 0 : lastSet.weight) || +s.weight || 0,
+                        reps: (lastSet === null || lastSet === void 0 ? void 0 : lastSet.reps) || +s.reps || 0,
+                        warmup: s.warmup || false,
+                        done: false,
+                        weightR: +s.weightR || 0
+                    };
+                })
+            };
+        });
         setSessions_(ns);
         setPlanName(plan.name);
         setPlanColor(plan.color);
