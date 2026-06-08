@@ -425,7 +425,23 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                             React.createElement("button", { onClick: () => setShowSwap(false), style: { background: "transparent", border: "1px solid #2a3a50", borderRadius: 8, color: "#556", fontSize: 13, padding: "4px 12px", cursor: "pointer" } }, "\u95DC\u9589")),
                         React.createElement("div", { style: { display: "flex", background: "#0a0e18", borderRadius: 9, padding: 3, gap: 2, marginBottom: 10 } }, [{ id: "swap", label: `換掉「${exName}」` }, { id: "add", label: "新增動作" }].map(m => (React.createElement("button", { key: m.id, onClick: () => setSwapMode(m.id), style: { flex: 1, background: swapMode === m.id ? "#0e1a2e" : "transparent", border: swapMode === m.id ? "1px solid #00e5ff22" : "1px solid transparent",
                                 borderRadius: 7, color: swapMode === m.id ? "#00e5ff" : "#445", fontSize: 11, fontWeight: swapMode === m.id ? 700 : 400, padding: "7px 0", cursor: "pointer" } }, m.label)))),
-                        swapMode === "swap" && React.createElement("div", { style: { color: "#f0a500", fontSize: 11, padding: "6px 10px", background: "#f0a50010", borderRadius: 7, border: "1px solid #f0a50033" } }, "\u26A0 \u66FF\u63DB\u52D5\u4F5C\uFF0C\u5DF2\u505A\u91CD\u91CF\u4FDD\u7559")),
+                        swapMode === "swap" && React.createElement("div", { style: { color: "#f0a500", fontSize: 11, padding: "6px 10px", background: "#f0a50010", borderRadius: 7, border: "1px solid #f0a50033" } }, "\u26A0 \u66FF\u63DB\u52D5\u4F5C\uFF0C\u5DF2\u505A\u91CD\u91CF\u4FDD\u7559"),
+                        React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
+                            React.createElement("input", { placeholder: "\u81EA\u8A02\u52D5\u4F5C\u540D\u7A31...", id: "custom-ex-input", style: { flex: 1, background: "#080e1a", border: "1px solid #2a3a50", borderRadius: 8,
+                                    color: "#fff", fontSize: 13, padding: "8px 12px" }, onKeyDown: e => {
+                                    if (e.key === "Enter" && e.target.value.trim()) {
+                                        swapMode === "swap" ? swapExercise(e.target.value.trim()) : addExerciseNow(e.target.value.trim());
+                                        e.target.value = "";
+                                    }
+                                } }),
+                            React.createElement("button", { onClick: () => {
+                                    const el = document.getElementById("custom-ex-input");
+                                    if (el && el.value.trim()) {
+                                        swapMode === "swap" ? swapExercise(el.value.trim()) : addExerciseNow(el.value.trim());
+                                        el.value = "";
+                                    }
+                                }, style: { background: "#00e5ff18", border: "1px solid #00e5ff44", borderRadius: 8,
+                                    color: "#00e5ff", fontSize: 13, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, "\u78BA\u8A8D"))),
                     React.createElement(ExPickerBody, { exercises: exercises, onSelect: swapMode === "swap" ? swapExercise : addExerciseNow }))))),
         showOverview && (React.createElement("div", { style: { position: "absolute", inset: 0, zIndex: 150, display: "flex", flexDirection: "column" } },
             React.createElement("div", { style: { flex: 1, background: "#00000055" }, onClick: () => { setShowOverview(false); setEditMode(false); } }),
@@ -572,13 +588,14 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                 React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" } },
                     lastRec.sets.map((s, i) => {
                         const isCurrent = i === si;
-                        const diff = isCurrent ? ((curSet.weight || 0) * (curSet.reps || 0)) - ((s.weight || 0) * (s.reps || 0)) : 0;
+                        // Compare by weight (heavier = progress), not volume
+                        const weightDiff = isCurrent ? (curSet.weight || 0) - (s.weight || 0) : 0;
                         return (React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 3 } },
                             React.createElement("span", { style: { color: "#334", fontSize: 10 } },
                                 "S",
                                 i + 1),
                             React.createElement("span", { style: {
-                                    color: isCurrent ? (diff > 0 ? "#22c55e" : diff < 0 ? "#ff4d6d" : "#778") : "#556",
+                                    color: isCurrent ? (weightDiff > 0 ? "#22c55e" : weightDiff < 0 ? "#f0a500" : "#778") : "#556",
                                     fontWeight: isCurrent ? 700 : 400, fontSize: 12
                                 } },
                                 s.weight,
@@ -587,17 +604,30 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                     }),
                     si < lastRec.sets.length && (() => {
                         const ls = lastRec.sets[si];
-                        const diff = ((curSet.weight || 0) * (curSet.reps || 0)) - ((ls.weight || 0) * (ls.reps || 0));
-                        if (diff > 0)
+                        const weightDiff = (curSet.weight || 0) - (ls.weight || 0);
+                        // Weight up = progress regardless of reps
+                        if (weightDiff > 0)
                             return React.createElement("span", { style: { color: "#22c55e", fontSize: 10, marginLeft: "auto" } },
-                                "\u2191 +",
-                                diff,
+                                "\u2191 \u91CD\u91CF +",
+                                weightDiff,
                                 "kg");
-                        if (diff < 0)
-                            return React.createElement("span", { style: { color: "#ff4d6d", fontSize: 10, marginLeft: "auto" } },
-                                "\u2193 ",
-                                diff,
+                        if (weightDiff < 0)
+                            return React.createElement("span", { style: { color: "#f0a500", fontSize: 10, marginLeft: "auto" } },
+                                "\u91CD\u91CF ",
+                                weightDiff,
                                 "kg");
+                        // Same weight, check reps
+                        const repsDiff = (curSet.reps || 0) - (ls.reps || 0);
+                        if (repsDiff > 0)
+                            return React.createElement("span", { style: { color: "#22c55e", fontSize: 10, marginLeft: "auto" } },
+                                "\u2191 \u591A ",
+                                repsDiff,
+                                " \u4E0B");
+                        if (repsDiff < 0)
+                            return React.createElement("span", { style: { color: "#556", fontSize: 10, marginLeft: "auto" } },
+                                "\u5C11 ",
+                                Math.abs(repsDiff),
+                                " \u4E0B");
                         return React.createElement("span", { style: { color: "#445", fontSize: 10, marginLeft: "auto" } }, "= \u6301\u5E73");
                     })()))),
             React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
