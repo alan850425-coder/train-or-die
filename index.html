@@ -325,8 +325,17 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     const [showSwap, setShowSwap] = useState(false);
     const exercises = LS.get("wt_exercises", DEFAULT_EXERCISES);
     const swapExercise = (newName) => {
-        // replace all sets of current exercise
-        const ns = sessions.map((s, i) => i === ei ? Object.assign(Object.assign({}, s), { exercise: newName, sets: s.sets.map(set => (Object.assign(Object.assign({}, set), { done: false }))) }) : s);
+        const lastRec = getLastRecord(data, newName, date);
+        const ns = sessions.map((s, i) => {
+            if (i !== ei)
+                return s;
+            const newSets = s.sets.map((set, si) => {
+                var _a, _b, _c;
+                const lastSet = (_a = lastRec === null || lastRec === void 0 ? void 0 : lastRec.sets) === null || _a === void 0 ? void 0 : _a[si];
+                return Object.assign(Object.assign({}, set), { weight: (_b = lastSet === null || lastSet === void 0 ? void 0 : lastSet.weight) !== null && _b !== void 0 ? _b : 0, reps: (_c = lastSet === null || lastSet === void 0 ? void 0 : lastSet.reps) !== null && _c !== void 0 ? _c : 0, done: false });
+            });
+            return Object.assign(Object.assign({}, s), { exercise: newName, sets: newSets });
+        });
         setSessions(ns);
         setShowSwap(false);
     };
@@ -335,7 +344,22 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
         setSessions(ns);
         setShowSwap(false);
     };
-    const [swapMode, setSwapMode] = useState("swap"); // "swap" | "add"
+    const [swapPreview, setSwapPreview] = useState(null); // {name, lastRec}
+    const handleSwapSelect = (name) => {
+        if (swapMode === "add") {
+            addExerciseNow(name);
+            return;
+        }
+        const lastRec = getLastRecord(data, name, date);
+        if (lastRec) {
+            // Show preview with last record info before confirming
+            setSwapPreview({ name, lastRec });
+        }
+        else {
+            // No record, swap immediately with zeros
+            swapExercise(name);
+        }
+    };
     const updateCurSet = (f, v) => {
         const ns = sessions.map((s, i) => i === ei ? Object.assign(Object.assign({}, s), { sets: s.sets.map((set, j) => j === si ? Object.assign(Object.assign({}, set), { [f]: v }) : set) }) : s);
         setSessions(ns);
@@ -442,7 +466,30 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                                     }
                                 }, style: { background: "#00e5ff18", border: "1px solid #00e5ff44", borderRadius: 8,
                                     color: "#00e5ff", fontSize: 13, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, "\u78BA\u8A8D"))),
-                    React.createElement(ExPickerBody, { exercises: exercises, onSelect: swapMode === "swap" ? swapExercise : addExerciseNow }))))),
+                    React.createElement(ExPickerBody, { exercises: exercises, onSelect: handleSwapSelect }),
+                    swapPreview && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "#0d1422", borderRadius: "20px 20px 0 0",
+                            display: "flex", flexDirection: "column", padding: 24, gap: 14 } },
+                        React.createElement("div", { style: { color: "#d0d8e8", fontWeight: 800, fontSize: 16 } }, swapPreview.name),
+                        React.createElement("div", { style: { background: "#080e18", borderRadius: 12, padding: 14, border: "1px solid #1a2535" } },
+                            React.createElement("div", { style: { color: "#334", fontSize: 11, marginBottom: 8 } },
+                                "\u4E0A\u6B21\u7D00\u9304 ",
+                                fmtDate(swapPreview.lastRec.date)),
+                            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, swapPreview.lastRec.sets.map((s, i) => (React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between" } },
+                                React.createElement("span", { style: { color: "#556", fontSize: 13 } },
+                                    "\u7B2C ",
+                                    i + 1,
+                                    " \u7D44"),
+                                React.createElement("span", { style: { color: "#aab", fontWeight: 700, fontSize: 13 } },
+                                    s.weight,
+                                    "kg \u00D7 ",
+                                    s.reps,
+                                    " \u4E0B")))))),
+                        React.createElement("div", { style: { color: "#445", fontSize: 12 } }, "\u81EA\u52D5\u5E36\u5165\u4E0A\u6B21\u91CD\u91CF\uFF0C\u78BA\u8A8D\u63DB\u5230\u9019\u500B\u52D5\u4F5C\uFF1F"),
+                        React.createElement("div", { style: { display: "flex", gap: 10 } },
+                            React.createElement("button", { onClick: () => setSwapPreview(null), style: { flex: 1, background: "#111827", border: "1px solid #2a3a50", borderRadius: 10,
+                                    color: "#778", fontSize: 14, padding: "11px", cursor: "pointer" } }, "\u53D6\u6D88"),
+                            React.createElement("button", { onClick: () => { swapExercise(swapPreview.name); setSwapPreview(null); }, style: { flex: 1, background: "linear-gradient(135deg,#00e5ff,#0077cc)", border: "none",
+                                    borderRadius: 10, color: "#000", fontWeight: 800, fontSize: 14, padding: "11px", cursor: "pointer" } }, "\u78BA\u8A8D\u63DB\u4E0A")))))))),
         showOverview && (React.createElement("div", { style: { position: "absolute", inset: 0, zIndex: 150, display: "flex", flexDirection: "column" } },
             React.createElement("div", { style: { flex: 1, background: "#00000055" }, onClick: () => { setShowOverview(false); setEditMode(false); } }),
             React.createElement("div", { style: { background: "#0d1422", borderRadius: "20px 20px 0 0", border: "1px solid #1e2a40", borderBottom: "none", maxHeight: "85vh", display: "flex", flexDirection: "column" } },
