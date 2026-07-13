@@ -325,8 +325,10 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
     const lastRec = getLastRecord(data, exName, date);
     // swap / add state
     const [showSwap, setShowSwap] = useState(false);
-    const [swapMode, setSwapMode] = useState("swap"); // "swap" | "add"
+    const [swapMode, setSwapMode] = useState("swap");
     const [swapPreview, setSwapPreview] = useState(null);
+    const [customName, setCustomName] = useState("");
+    const [customMuscle, setCustomMuscle] = useState("胸");
     const exercises = LS.get("wt_exercises", DEFAULT_EXERCISES);
     const swapExercise = (newName) => {
         const lastRec = getLastRecord(data, newName, date);
@@ -453,35 +455,36 @@ function ActiveWorkout({ sessions, setSessions, planName, planColor, data, date,
                         React.createElement("div", { style: { display: "flex", background: "#0a0e18", borderRadius: 9, padding: 3, gap: 2, marginBottom: 10 } }, [{ id: "swap", label: `換掉「${exName}」` }, { id: "add", label: "新增動作" }].map(m => (React.createElement("button", { key: m.id, onClick: () => setSwapMode(m.id), style: { flex: 1, background: swapMode === m.id ? "#0e1a2e" : "transparent", border: swapMode === m.id ? "1px solid #00e5ff22" : "1px solid transparent",
                                 borderRadius: 7, color: swapMode === m.id ? "#00e5ff" : "#445", fontSize: 11, fontWeight: swapMode === m.id ? 700 : 400, padding: "7px 0", cursor: "pointer" } }, m.label)))),
                         swapMode === "swap" && React.createElement("div", { style: { color: "#f0a500", fontSize: 11, padding: "6px 10px", background: "#f0a50010", borderRadius: 7, border: "1px solid #f0a50033" } }, "\u26A0 \u66FF\u63DB\u52D5\u4F5C\uFF0C\u5DF2\u505A\u91CD\u91CF\u4FDD\u7559"),
-                        (() => {
-                            const [customName, setCustomName] = useState("");
-                            const [customMuscle, setCustomMuscle] = useState("胸");
-                            const confirmCustom = () => {
-                                const name = customName.trim();
-                                if (!name)
-                                    return;
-                                // Save to exercise DB if not already there
-                                const exList = LS.get("wt_exercises", DEFAULT_EXERCISES);
-                                if (!exList.find(e => e.name === name)) {
-                                    const updated = [...exList, { name, muscle: customMuscle }];
-                                    LS.set("wt_exercises", updated);
-                                }
-                                swapMode === "swap" ? swapExercise(name) : addExerciseNow(name);
-                                setCustomName("");
-                            };
-                            return (React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
-                                React.createElement("div", { style: { display: "flex", gap: 8 } },
-                                    React.createElement("input", { value: customName, onChange: e => setCustomName(e.target.value), placeholder: "\u81EA\u8A02\u52D5\u4F5C\u540D\u7A31...", onKeyDown: e => e.key === "Enter" && confirmCustom(), style: { flex: 1, background: "#080e1a", border: "1px solid #2a3a50", borderRadius: 8,
-                                            color: "#fff", fontSize: 13, padding: "8px 12px" } }),
-                                    React.createElement("button", { onClick: confirmCustom, style: { background: "#00e5ff18", border: "1px solid #00e5ff44", borderRadius: 8,
-                                            color: "#00e5ff", fontSize: 13, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, "\u78BA\u8A8D")),
-                                customName.trim() && (React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                                    ["胸", "背", "肩", "腿", "二頭", "三頭", "全身", "核心"].map(m => (React.createElement("button", { key: m, onClick: () => setCustomMuscle(m), style: { background: customMuscle === m ? "#00e5ff18" : "#080e1a",
-                                            border: `1px solid ${customMuscle === m ? "#00e5ff55" : "#2a3a50"}`,
-                                            borderRadius: 20, color: customMuscle === m ? "#00e5ff" : "#556",
-                                            fontSize: 11, padding: "3px 10px", cursor: "pointer" } }, m))),
-                                    React.createElement("span", { style: { color: "#334", fontSize: 10, alignSelf: "center" } }, "\u2192 \u5B58\u5230\u52D5\u4F5C\u5EAB")))));
-                        })()),
+                        React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
+                            React.createElement("div", { style: { display: "flex", gap: 8 } },
+                                React.createElement("input", { value: customName, onChange: e => setCustomName(e.target.value), placeholder: "\u81EA\u8A02\u52D5\u4F5C\u540D\u7A31...", onKeyDown: e => {
+                                        if (e.key === "Enter" && customName.trim()) {
+                                            const exList = LS.get("wt_exercises", DEFAULT_EXERCISES);
+                                            if (!exList.find(ex => ex.name === customName.trim())) {
+                                                LS.set("wt_exercises", [...exList, { name: customName.trim(), muscle: customMuscle }]);
+                                            }
+                                            swapMode === "swap" ? swapExercise(customName.trim()) : addExerciseNow(customName.trim());
+                                            setCustomName("");
+                                        }
+                                    }, style: { flex: 1, background: "#080e1a", border: "1px solid #2a3a50", borderRadius: 8,
+                                        color: "#fff", fontSize: 13, padding: "8px 12px" } }),
+                                React.createElement("button", { onClick: () => {
+                                        if (!customName.trim())
+                                            return;
+                                        const exList = LS.get("wt_exercises", DEFAULT_EXERCISES);
+                                        if (!exList.find(ex => ex.name === customName.trim())) {
+                                            LS.set("wt_exercises", [...exList, { name: customName.trim(), muscle: customMuscle }]);
+                                        }
+                                        swapMode === "swap" ? swapExercise(customName.trim()) : addExerciseNow(customName.trim());
+                                        setCustomName("");
+                                    }, style: { background: "#00e5ff18", border: "1px solid #00e5ff44", borderRadius: 8,
+                                        color: "#00e5ff", fontSize: 13, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, "\u78BA\u8A8D")),
+                            customName.trim() && (React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" } },
+                                ["胸", "背", "肩", "腿", "二頭", "三頭", "全身", "核心"].map(m => (React.createElement("button", { key: m, onClick: () => setCustomMuscle(m), style: { background: customMuscle === m ? "#00e5ff18" : "#080e1a",
+                                        border: `1px solid ${customMuscle === m ? "#00e5ff55" : "#2a3a50"}`,
+                                        borderRadius: 20, color: customMuscle === m ? "#00e5ff" : "#556",
+                                        fontSize: 11, padding: "3px 10px", cursor: "pointer" } }, m))),
+                                React.createElement("span", { style: { color: "#334", fontSize: 10 } }, "\u2192 \u540C\u6B65\u5230\u52D5\u4F5C\u5EAB"))))),
                     React.createElement(ExPickerBody, { exercises: exercises, onSelect: handleSwapSelect }),
                     swapPreview && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "#0d1422", borderRadius: "20px 20px 0 0",
                             display: "flex", flexDirection: "column", padding: 24, gap: 14 } },
